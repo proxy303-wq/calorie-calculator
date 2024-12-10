@@ -1,34 +1,49 @@
-const express = require('express');
-const axios = require('axios');
-require('dotenv').config();
-
+const express = require("express");
+const axios = require("axios");
 const app = express();
+const port = 3000;
 
-// Serve static files
-app.use(express.static('public'));
+const apiKey = bPm4BEwq5MetNf9NVo9rrZ93dkBByBkjRWbK2ETA ;
 
-// API route to fetch calorie data
-app.get('/api/calories', async (req, res) => {
-    const { foodName } = req.query; // Extract foodName from the request
-    const apiKey = process.env.API_KEY; // Get API key from .env
-
+app.get("/getNutrition", async (req, res) => {
     try {
-        // Call USDA FoodData Central API
+        const { food, servingSize } = req.query; // Get food name and serving size from query
+        
+        // Call USDA API
         const response = await axios.get(
-            `https://api.nal.usda.gov/fdc/v1/foods/search?query=${foodName}&api_key=${apiKey}`
+            `https://api.nal.usda.gov/fdc/v1/foods/search`,
+            {
+                params: {
+                    query: food,
+                    pageSize: 1, // Get the first result
+                    api_key: apiKey,
+                },
+            }
         );
 
-        // Extract calorie data from the API response
-        const food = response.data.foods[0]; // First matching food item
-        const calories = food.foodNutrients.find(n => n.nutrientName === 'Energy').value;
+        const foodData = response.data.foods[0]; // Take the first result
+        const baseNutrients = foodData.foodNutrients; // Nutritional data
 
-        // Send the result back to the client
-        res.json({ foodName: food.description, calories });
+        // Calculate values based on serving size (if provided)
+        const multiplier = servingSize ? servingSize / 100 : 1; // USDA data is per 100g by default
+
+        // Prepare response data
+        const nutrients = {
+            foodName: foodData.description,
+            calories: baseNutrients.find(n => n.nutrientName === "Energy").value * multiplier,
+            protein: baseNutrients.find(n => n.nutrientName === "Protein").value * multiplier,
+            fats: baseNutrients.find(n => n.nutrientName === "Total lipid (fat)").value * multiplier,
+            carbs: baseNutrients.find(n => n.nutrientName === "Carbohydrate, by difference").value * multiplier,
+            servingSize: servingSize || 100, // Default is 100g if no serving size is given
+        };
+
+        res.json(nutrients);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'Failed to fetch calorie data' });
+        console.error("Error fetching nutrition data:", error);
+        res.status(500).json({ error: "Failed to fetch nutrition data" });
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+});
