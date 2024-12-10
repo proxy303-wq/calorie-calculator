@@ -3,7 +3,7 @@ const axios = require("axios");
 const app = express();
 const port = 3000;
 
-const apiKey =bPm4BEwq5MetNf9NVo9rrZ93dkBByBkjRWbK2ETA;
+const apiKey = bPm4BEwq5MetNf9NVo9rrZ93dkBByBkjRWbK2ETA;
 
 app.get("/getNutrition", async (req, res) => {
     try {
